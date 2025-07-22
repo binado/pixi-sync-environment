@@ -4,7 +4,7 @@ import argparse
 def get_parser() -> argparse.ArgumentParser:
     """Create an ArgumentParser for the compare_environments function."""
     parser = argparse.ArgumentParser(
-        description="Compare and update environment files using pixi data",
+        description="Compare and update conda environment files using pixi manifest",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
