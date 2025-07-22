@@ -1,0 +1,6 @@
+- id: sync-environments
+  name: Sync pixi environment with conda environment file
+  entry: sync_environments
+  files: (?:.*/)?(?:pyproject\.toml|pixi\.lock)$
+  language: python
+  minimum_pre_commit_version: 2.9.2
