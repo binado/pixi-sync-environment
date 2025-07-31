@@ -2,15 +2,14 @@ from pathlib import Path
 
 import yaml
 
+CONFIG_FILENAMES = ["environment.yml", "pixi.toml", "pyproject.toml", "pixi.lock"]
 
-def find_project_dir(root_dir: str = ".") -> Path | None:
-    """Find the directory containing the first pyproject.toml file encountered."""
-    path = Path(root_dir)
-    try:
-        pyproject_file = next(path.rglob("pyproject.toml"))
-        return pyproject_file.parent
-    except StopIteration:
-        return None
+
+def find_project_dir(input_file: Path) -> Path | None:
+    filename = input_file.name
+    if filename not in CONFIG_FILENAMES:
+        raise ValueError(f"Expected filename to be one of {CONFIG_FILENAMES}")
+    return input_file.parent
 
 
 def load_environment_file(

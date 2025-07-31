@@ -1,14 +1,14 @@
+import argparse
 import logging
 import sys
 from pathlib import Path
-from pprint import pprint
 
 from pre_commit_pixi_environment_file.io import (
+    CONFIG_FILENAMES,
     find_project_dir,
     load_environment_file,
     save_environment_file,
 )
-from pre_commit_pixi_environment_file.parser import get_parser
 from pre_commit_pixi_environment_file.pixi_environment import (
     create_environment_dict_from_pixi,
 )
@@ -20,6 +20,67 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+
+def get_parser() -> argparse.ArgumentParser:
+    """Create an ArgumentParser for the compare_environments function."""
+    parser = argparse.ArgumentParser(
+        description="Compare and update conda environment files using pixi manifest",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+
+    parser.add_argument(
+        "input_files",
+        nargs="+",
+        type=Path,
+        help=f"Path to configuration files ({'/'.join(CONFIG_FILENAMES)})",
+    )
+
+    parser.add_argument(
+        "--environment-file",
+        type=str,
+        default="environment.yml",
+        help="Name of the environment file",
+    )
+
+    parser.add_argument(
+        "--explicit",
+        action="store_true",
+        default=False,
+        help="Use explicit package specifications",
+    )
+
+    parser.add_argument(
+        "--name", type=str, default=None, help="Environment name (optional)"
+    )
+
+    parser.add_argument(
+        "--prefix", type=str, default=None, help="Environment prefix path (optional)"
+    )
+
+    parser.add_argument(
+        "--include-pip-packages",
+        action="store_true",
+        default=False,
+        help="Include pip packages in the environment",
+    )
+
+    parser.add_argument(
+        "--include-conda-channels",
+        action="store_true",
+        dest="include_conda_channels",
+        default=True,
+        help="Include conda channels from the environment",
+    )
+
+    parser.add_argument(
+        "--include-build",
+        action="store_true",
+        default=False,
+        help="Include build information",
+    )
+
+    return parser
 
 
 def sync_environments(
@@ -61,7 +122,7 @@ def sync_environments(
 
 def main() -> None:
     args = get_parser().parse_args()
-    path_dir = find_project_dir(root_dir=args.root_dir)
+    path_dir = find_project_dir(args.input_file)
     if path_dir is None:
         sys.exit(1)
 
