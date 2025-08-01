@@ -6,6 +6,7 @@ from pathlib import Path
 from pre_commit_pixi_environment_file.io import (
     CONFIG_FILENAMES,
     find_project_dir,
+    get_manifest_path,
     load_environment_file,
     save_environment_file,
 )
@@ -96,7 +97,9 @@ def sync_environments(
     current_environment_dict = load_environment_file(
         path_dir, environment_file, raise_exception=False
     )
+    manifest_path = get_manifest_path(path_dir)
     new_environment_dict = create_environment_dict_from_pixi(
+        manifest_path,
         explicit=explicit,
         name=name,
         prefix=prefix,
@@ -122,17 +125,19 @@ def sync_environments(
 
 def main() -> None:
     args = get_parser().parse_args()
-    path_dir = find_project_dir(args.input_file)
-    if path_dir is None:
+    project_dirs = find_project_dir(args.input_files)
+    if not project_dirs:
         sys.exit(1)
 
-    sync_environments(
-        path_dir,
-        environment_file=args.environment_file,
-        explicit=args.explicit,
-        name=args.name,
-        prefix=args.prefix,
-        include_pip_packages=args.include_pip_packages,
-        include_conda_channels=args.include_conda_channels,
-        include_build=args.include_build,
-    )
+    for dir in project_dirs:
+        logger.info("Syncing environment for directory %s", dir)
+        sync_environments(
+            dir,
+            environment_file=args.environment_file,
+            explicit=args.explicit,
+            name=args.name,
+            prefix=args.prefix,
+            include_pip_packages=args.include_pip_packages,
+            include_conda_channels=args.include_conda_channels,
+            include_build=args.include_build,
+        )

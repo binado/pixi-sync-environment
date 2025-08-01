@@ -2,14 +2,27 @@ from pathlib import Path
 
 import yaml
 
-CONFIG_FILENAMES = ["environment.yml", "pixi.toml", "pyproject.toml", "pixi.lock"]
+MANIFEST_FILENAMES = ("pixi.toml", "pyproject.toml")
+CONFIG_FILENAMES = (*MANIFEST_FILENAMES, "environment.yml", "pixi.lock")
 
 
-def find_project_dir(input_file: Path) -> Path | None:
-    filename = input_file.name
-    if filename not in CONFIG_FILENAMES:
-        raise ValueError(f"Expected filename to be one of {CONFIG_FILENAMES}")
-    return input_file.parent
+def find_project_dir(input_files: list[Path]) -> list[Path]:
+    path_dir = set()
+    for input_file in input_files:
+        filename = input_file.name
+        if filename not in CONFIG_FILENAMES:
+            raise ValueError(f"Expected filename to be one of {CONFIG_FILENAMES}")
+        path_dir.add(input_file.parent)
+    return list(path_dir)
+
+
+def get_manifest_path(path_dir: Path) -> Path:
+    for manifest_filename in MANIFEST_FILENAMES:
+        manifest_path = path_dir / manifest_filename
+        if manifest_path.is_file():
+            return manifest_path
+
+    raise ValueError(f"Could not find manifest path on directory {path_dir}")
 
 
 def load_environment_file(

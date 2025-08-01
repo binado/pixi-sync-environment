@@ -1,6 +1,7 @@
 import json
 import logging
 import subprocess
+from pathlib import Path
 from typing import Iterable
 
 from pre_commit_pixi_environment_file.package_info import PackageInfo
@@ -8,19 +9,25 @@ from pre_commit_pixi_environment_file.package_info import PackageInfo
 logger = logging.getLogger(__name__)
 
 
-def get_pixi_packages(explicit: bool = False) -> list[PackageInfo]:
+def get_pixi_packages(manifest_path: Path, explicit: bool = False) -> list[PackageInfo]:
     logger.info("Getting explicit packages from pixi")
-    args = ["pixi", "list", "--json"]
+    args = ["pixi", "list", "--manifest-path", str(manifest_path), "--json"]
     if explicit:
         args.append("--explicit")
     cmd = " ".join(args)
     logger.info("Running %s", cmd)
-    result = subprocess.run(
-        args,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    try:
+        result = subprocess.run(
+            args,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as err:
+        logger.error(err.output)
+        logger.exception(err)
+        raise err
+
     package_list = json.loads(result.stdout)
     return [PackageInfo(**package) for package in package_list]
 
@@ -59,6 +66,7 @@ def create_environment_dict_from_packages(
 
 
 def create_environment_dict_from_pixi(
+    manifest_path: Path,
     explicit: bool = False,
     name: str | None = None,
     prefix: str | None = None,
@@ -66,7 +74,7 @@ def create_environment_dict_from_pixi(
     include_conda_channels: bool = True,
     include_build: bool = False,
 ) -> dict:
-    packages = get_pixi_packages(explicit=explicit)
+    packages = get_pixi_packages(manifest_path, explicit=explicit)
     return create_environment_dict_from_packages(
         packages,
         name=name,
