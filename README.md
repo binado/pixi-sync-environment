@@ -16,9 +16,8 @@ repos:
   - repo: https://github.com/binado/pre-commit-pixi-environment-file
     rev: v0.1.0
     hooks:
-      - id: sync-environments
+      - id: pixi-sync-environment
         args: []
-
 ```
 
 ## Optional arguments:

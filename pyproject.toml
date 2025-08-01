@@ -22,7 +22,7 @@ dependencies = [
 Homepage = "https://github.com/binado/pre-commit-pixi-environment-file"
 
 [project.scripts]
-sync_environments = "pre_commit_pixi_environment_file:main"
+pixi_sync_environment = "pre_commit_pixi_environment_file:main"
 
 [dependency-groups]
 dev = [

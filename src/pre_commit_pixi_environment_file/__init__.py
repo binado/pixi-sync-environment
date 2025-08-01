@@ -84,7 +84,7 @@ def get_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def sync_environments(
+def pixi_sync_environment(
     path_dir: Path,
     environment_file: str = "environment.yml",
     explicit: bool = False,
@@ -131,7 +131,7 @@ def main() -> None:
 
     for dir in project_dirs:
         logger.info("Syncing environment for directory %s", dir)
-        sync_environments(
+        pixi_sync_environment(
             dir,
             environment_file=args.environment_file,
             explicit=args.explicit,
