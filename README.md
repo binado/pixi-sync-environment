@@ -26,7 +26,14 @@ repos:
 You may specify additional arguments in the `args` property:
 
 ```bash
-  --root-dir ROOT_DIR   Path to the root directory (default: .)
+Compare and update conda environment files using pixi manifest
+
+positional arguments:
+  input_files           Path to configuration files
+                        (pixi.toml/pyproject.toml/environment.yml/pixi.lock)
+
+options:
+  -h, --help            show this help message and exit
   --environment-file ENVIRONMENT_FILE
                         Name of the environment file (default:
                         environment.yml)
@@ -36,8 +43,8 @@ You may specify additional arguments in the `args` property:
   --include-pip-packages
                         Include pip packages in the environment (default:
                         False)
-  --no-include-conda-channels
-                        Exclude conda channels from the environment (default:
-                        include channels) (default: True)
+  --include-conda-channels
+                        Include conda channels from the environment (default:
+                        True)
   --include-build       Include build information (default: False)
 ```
