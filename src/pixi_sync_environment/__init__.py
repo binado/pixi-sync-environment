@@ -3,14 +3,14 @@ import logging
 import sys
 from pathlib import Path
 
-from pre_commit_pixi_environment_file.io import (
+from pixi_sync_environment.io import (
     CONFIG_FILENAMES,
     find_project_dir,
     get_manifest_path,
     load_environment_file,
     save_environment_file,
 )
-from pre_commit_pixi_environment_file.pixi_environment import (
+from pixi_sync_environment.pixi_environment import (
     create_environment_dict_from_pixi,
 )
 

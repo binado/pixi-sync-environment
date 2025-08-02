@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 from typing import Iterable
 
-from pre_commit_pixi_environment_file.package_info import PackageInfo
+from pixi_sync_environment.package_info import PackageInfo
 
 logger = logging.getLogger(__name__)
 

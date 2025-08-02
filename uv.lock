@@ -48,6 +48,29 @@ wheels = [
 ]
 
 [[package]]
+name = "pixi-sync-environment"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "pyyaml" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pre-commit" },
+]
+lint = [
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pyyaml", specifier = ">=6.0.2" }]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pre-commit", specifier = ">=4.2.0" }]
+lint = [{ name = "ruff", specifier = ">=0.12.7" }]
+
+[[package]]
 name = "platformdirs"
 version = "4.3.8"
 source = { registry = "https://pypi.org/simple" }
@@ -71,29 +94,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/08/39/679ca9b26c7bb2999
 wheels = [
     { url = "https://files.pythonhosted.org/packages/88/74/a88bf1b1efeae488a0c0b7bdf71429c313722d1fc0f377537fbe554e6180/pre_commit-4.2.0-py2.py3-none-any.whl", hash = "sha256:a009ca7205f1eb497d10b845e52c838a98b6cdd2102a6c8e4540e94ee75c58bd", size = 220707, upload-time = "2025-03-18T21:35:19.343Z" },
 ]
-
-[[package]]
-name = "pre-commit-pixi-environment-file"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "pyyaml" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pre-commit" },
-]
-lint = [
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "pyyaml", specifier = ">=6.0.2" }]
-
-[package.metadata.requires-dev]
-dev = [{ name = "pre-commit", specifier = ">=4.2.0" }]
-lint = [{ name = "ruff", specifier = ">=0.12.7" }]
 
 [[package]]
 name = "pyyaml"

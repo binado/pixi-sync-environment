@@ -1,4 +1,4 @@
-# pre-commit-pixi-environment-file
+# pixi-sync-environment
 
 Pre-commit hook to sync a pixi environment with a traditional conda environment.yml.
 Useful tool if you want to keep an up-to-date `environment.yml`  in your project.
@@ -13,7 +13,7 @@ To use it, register the hook in your `.pre-commit-config.yml`:
 
 ```yaml
 repos:
-  - repo: https://github.com/binado/pre-commit-pixi-environment-file
+  - repo: https://github.com/binado/pixi-sync-environment
     rev: v0.1.0
     hooks:
       - id: pixi-sync-environment

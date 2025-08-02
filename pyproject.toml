@@ -3,7 +3,7 @@ requires = ["uv_build>=0.8.4,<0.9.0"]
 build-backend = "uv_build"
 
 [project]
-name = "pre_commit_pixi_environment_file"
+name = "pixi_sync_environment"
 authors = [
     { name = "Bernardo Veronese", email = "bernardopveronese@gmail.com" },
 ]
@@ -19,10 +19,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/binado/pre-commit-pixi-environment-file"
+Homepage = "https://github.com/binado/pixi-sync-environment"
 
 [project.scripts]
-pixi_sync_environment = "pre_commit_pixi_environment_file:main"
+pixi_sync_environment = "pixi_sync_environment:main"
 
 [dependency-groups]
 dev = [
