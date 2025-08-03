@@ -9,9 +9,19 @@ from pixi_sync_environment.package_info import PackageInfo
 logger = logging.getLogger(__name__)
 
 
-def get_pixi_packages(manifest_path: Path, explicit: bool = False) -> list[PackageInfo]:
+def get_pixi_packages(
+    manifest_path: Path, environment: str | None = None, explicit: bool = False
+) -> list[PackageInfo]:
     logger.info("Getting explicit packages from pixi")
-    args = ["pixi", "list", "--manifest-path", str(manifest_path), "--json"]
+    args = [
+        "pixi",
+        "list",
+        "--manifest-path",
+        str(manifest_path),
+        "--json",
+    ]
+    if environment:
+        args += ["--environment", environment]
     if explicit:
         args.append("--explicit")
     cmd = " ".join(args)
@@ -67,6 +77,7 @@ def create_environment_dict_from_packages(
 
 def create_environment_dict_from_pixi(
     manifest_path: Path,
+    environment: str,
     explicit: bool = False,
     name: str | None = None,
     prefix: str | None = None,
@@ -74,7 +85,7 @@ def create_environment_dict_from_pixi(
     include_conda_channels: bool = True,
     include_build: bool = False,
 ) -> dict:
-    packages = get_pixi_packages(manifest_path, explicit=explicit)
+    packages = get_pixi_packages(manifest_path, environment, explicit=explicit)
     return create_environment_dict_from_packages(
         packages,
         name=name,

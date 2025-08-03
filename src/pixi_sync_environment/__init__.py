@@ -60,6 +60,10 @@ def get_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "--environment", type=str, default="default", help="Name of pixi environment"
+    )
+
+    parser.add_argument(
         "--include-pip-packages",
         action="store_true",
         default=False,
@@ -86,6 +90,7 @@ def get_parser() -> argparse.ArgumentParser:
 
 def pixi_sync_environment(
     path_dir: Path,
+    environment: str = "default",
     environment_file: str = "environment.yml",
     explicit: bool = False,
     name: str | None = None,
@@ -100,6 +105,7 @@ def pixi_sync_environment(
     manifest_path = get_manifest_path(path_dir)
     new_environment_dict = create_environment_dict_from_pixi(
         manifest_path,
+        environment,
         explicit=explicit,
         name=name,
         prefix=prefix,
@@ -133,6 +139,7 @@ def main() -> None:
         logger.info("Syncing environment for directory %s", dir)
         pixi_sync_environment(
             dir,
+            environment=args.environment,
             environment_file=args.environment_file,
             explicit=args.explicit,
             name=args.name,
