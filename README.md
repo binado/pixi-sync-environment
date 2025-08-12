@@ -14,7 +14,7 @@ To use it, register the hook in your `.pre-commit-config.yml`:
 ```yaml
 repos:
   - repo: https://github.com/binado/pixi-sync-environment
-    rev: v0.1.0
+    rev: v0.1.2
     hooks:
       - id: pixi-sync-environment
         args: []
