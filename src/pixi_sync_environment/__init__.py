@@ -71,11 +71,11 @@ def get_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "--include-conda-channels",
-        action="store_true",
+        "--no-include-conda-channels",
+        action="store_false",
         dest="include_conda_channels",
         default=True,
-        help="Include conda channels from the environment",
+        help="Exclude conda channels from the environment",
     )
 
     parser.add_argument(
@@ -145,6 +145,6 @@ def main() -> None:
             name=args.name,
             prefix=args.prefix,
             include_pip_packages=args.include_pip_packages,
-            include_conda_channels=args.include_conda_channels,
+            include_conda_channels=args.no_include_conda_channels,  # Weird but correct
             include_build=args.include_build,
         )

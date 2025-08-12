@@ -39,11 +39,13 @@ options:
   --explicit            Use explicit package specifications (default: False)
   --name NAME           Environment name (optional) (default: None)
   --prefix PREFIX       Environment prefix path (optional) (default: None)
+  --environment ENVIRONMENT
+                        Name of pixi environment (default: default)
   --include-pip-packages
                         Include pip packages in the environment (default:
                         False)
-  --include-conda-channels
-                        Include conda channels from the environment (default:
+  --no-include-conda-channels
+                        Exclude conda channels from the environment (default:
                         True)
   --include-build       Include build information (default: False)
 ```
