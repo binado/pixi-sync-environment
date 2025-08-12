@@ -145,6 +145,6 @@ def main() -> None:
             name=args.name,
             prefix=args.prefix,
             include_pip_packages=args.include_pip_packages,
-            include_conda_channels=args.no_include_conda_channels,  # Weird but correct
+            include_conda_channels=args.include_conda_channels,
             include_build=args.include_build,
         )
