@@ -31,3 +31,6 @@ dev = [
 lint = [
     "ruff>=0.12.7",
 ]
+test = [
+    "pytest>=8.0.0",
+]
