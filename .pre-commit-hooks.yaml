@@ -1,6 +1,17 @@
 - id: pixi-sync-environment
   name: Sync pixi environment with conda environment file
+  description: Automatically update environment.yml when pixi manifest changes
   entry: pixi_sync_environment
-  files: (?:environment\.yml|pixi\.toml|pyproject\.toml|pixi\.lock)$
+  files: ^(pixi\.toml|pyproject\.toml|pixi\.lock)$
   language: python
   minimum_pre_commit_version: 2.9.2
+  pass_filenames: true
+
+- id: pixi-sync-check
+  name: Check pixi/environment.yml sync (read-only)
+  description: Verify environment.yml is in sync without modifying files (CI-friendly)
+  entry: pixi_sync_environment --check
+  files: ^(pixi\.toml|pyproject\.toml|environment\.yml|pixi\.lock)$
+  language: python
+  minimum_pre_commit_version: 2.9.2
+  pass_filenames: true
