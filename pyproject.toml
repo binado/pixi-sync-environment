@@ -22,7 +22,7 @@ dependencies = [
 Homepage = "https://github.com/binado/pixi-sync-environment"
 
 [project.scripts]
-pixi_sync_environment = "pixi_sync_environment:main"
+pixi_sync_environment = "pixi_sync_environment.cli:main"
 
 [dependency-groups]
 dev = [
