@@ -1,18 +1,25 @@
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v2.3.0
-    hooks:
-      - id: check-yaml
-      - id: end-of-file-fixer
-      - id: trailing-whitespace
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Ruff version.
-    rev: v0.4.4
-    hooks:
-      # Run the linter.
-      - id: ruff
-        types_or: [python]
-        args: [--fix]
-      # Run the formatter.
-      - id: ruff-format
-        types_or: [python]
+- hooks:
+  - id: check-yaml
+  - id: end-of-file-fixer
+  - id: trailing-whitespace
+  repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v2.3.0
+- hooks:
+  - args:
+    - --fix
+    id: ruff
+    types_or:
+    - python
+  - id: ruff-format
+    types_or:
+    - python
+  repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.4.4
+- hooks:
+  - id: commitizen
+  - id: commitizen-branch
+    stages:
+    - pre-push
+  repo: https://github.com/commitizen-tools/commitizen
+  rev: v4.9.1
