@@ -7,7 +7,8 @@ class PackageInfo:
     """Information about a package from pixi list output.
 
     This class represents package metadata extracted from pixi's package listing,
-    supporting both conda and PyPI packages with their associated metadata.
+    supporting both conda and PyPI packages with their associated metadata. Its attributes
+    mirror the json structure returned by `pixi list --json`.
 
     Parameters
     ----------
@@ -98,13 +99,28 @@ class PackageInfo:
 
         Examples
         --------
-        >>> pkg = PackageInfo(name="numpy", version="1.24.0", build="py311_0", ...)
+        >>> pkg = PackageInfo(
+        ...     name="numpy",
+        ...     version="1.24.0",
+        ...     size_bytes=12345678,
+        ...     build="py311h1234567_0",
+        ...     kind="conda",
+        ...     source="conda-forge",
+        ...     is_explicit=True
+        ... )
         >>> pkg.get_package_spec_str()
         'numpy=1.24.0'
         >>> pkg.get_package_spec_str(include_build=True)
         'numpy=1.24.0=py311_0'
         """
-        properties = [self.name, self.version]
-        if include_build and self.build is not None:
-            properties.append(self.build)
-        return "=".join(properties)
+        if self.is_pypi_package:
+            spec = self.name
+            if self.version is not None:
+                spec += f"=={self.version}"
+        else:
+            properties = [self.name, self.version]
+            if include_build and self.build is not None:
+                properties.append(self.build)
+            spec = "=".join(properties)
+
+        return spec
