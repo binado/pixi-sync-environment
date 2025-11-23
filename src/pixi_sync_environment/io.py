@@ -5,7 +5,7 @@ including pixi manifests and conda environment files.
 """
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 import yaml
 
@@ -16,7 +16,7 @@ MANIFEST_FILENAMES = ("pixi.toml", "pyproject.toml")
 CONFIG_FILENAMES = (*MANIFEST_FILENAMES, "environment.yml", "pixi.lock")
 
 
-def find_project_dir(input_files: list[Path]) -> list[Path]:
+def find_project_dir(input_files: Iterable[Path]) -> list[Path]:
     """Extract unique project directories from input files.
 
     Validates that all input files are recognized configuration files and
@@ -24,13 +24,13 @@ def find_project_dir(input_files: list[Path]) -> list[Path]:
 
     Parameters
     ----------
-    input_files : list of Path
+    input_files : Iterable[Path]
         List of file paths to process. Each file must have a filename
         that matches one of the recognized configuration file types.
 
     Returns
     -------
-    list of Path
+    list[Path]
         Unique list of parent directories containing the input files.
 
     Raises

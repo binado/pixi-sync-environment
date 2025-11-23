@@ -153,7 +153,7 @@ class TestGetPackageSpecStr:
         )
 
         spec = pkg.get_package_spec_str(include_build=False)
-        assert spec == "requests=2.31.0"
+        assert spec == "requests==2.31.0"
 
     def test_get_package_spec_str_none_build_with_flag(self):
         """Test that None build is ignored even with include_build=True."""
@@ -168,7 +168,7 @@ class TestGetPackageSpecStr:
         )
 
         spec = pkg.get_package_spec_str(include_build=True)
-        assert spec == "requests=2.31.0"
+        assert spec == "requests==2.31.0"
 
     def test_get_package_spec_str_special_characters(self):
         """Test package names with special characters (dashes, underscores)."""
