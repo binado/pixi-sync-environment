@@ -38,7 +38,6 @@ def _show_diff(
     """
     if current_dict is None:
         logger.info("Diff: %s does not exist and would be created", environment_file)
-        # Show what would be created
         new_yaml = yaml.dump(
             new_dict, default_flow_style=False, allow_unicode=True, sort_keys=False
         )
@@ -47,7 +46,6 @@ def _show_diff(
         print(new_yaml)
         print("---")
     else:
-        # Convert both to YAML strings for comparison
         current_yaml = yaml.dump(
             current_dict,
             default_flow_style=False,
@@ -58,7 +56,6 @@ def _show_diff(
             new_dict, default_flow_style=False, allow_unicode=True, sort_keys=False
         ).splitlines(keepends=True)
 
-        # Generate unified diff
         diff = difflib.unified_diff(
             current_yaml,
             new_yaml,
@@ -76,20 +73,10 @@ def _show_diff(
 def get_parser() -> argparse.ArgumentParser:
     """Create and configure the command-line argument parser.
 
-    Sets up all command-line arguments and options for the pixi-sync-environment
-    tool, including file inputs, environment configuration, and output options.
-
     Returns
     -------
     argparse.ArgumentParser
         Configured argument parser ready to parse command-line arguments.
-
-    Examples
-    --------
-    >>> parser = get_parser()
-    >>> args = parser.parse_args(['pixi.toml', '--name', 'myenv'])
-    >>> args.name
-    'myenv'
     """
     parser = argparse.ArgumentParser(
         description="Compare and update conda environment files using pixi manifest",
@@ -111,44 +98,11 @@ def get_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "--explicit",
-        action="store_true",
-        default=False,
-        help="Use explicit package specifications",
-    )
-
-    parser.add_argument(
         "--name", type=str, default=None, help="Environment name (optional)"
     )
 
     parser.add_argument(
-        "--prefix", type=str, default=None, help="Environment prefix path (optional)"
-    )
-
-    parser.add_argument(
         "--environment", type=str, default="default", help="Name of pixi environment"
-    )
-
-    parser.add_argument(
-        "--include-pip-packages",
-        action="store_true",
-        default=False,
-        help="Include pip packages in the environment",
-    )
-
-    parser.add_argument(
-        "--no-include-conda-channels",
-        action="store_false",
-        dest="include_conda_channels",
-        default=True,
-        help="Exclude conda channels from the environment",
-    )
-
-    parser.add_argument(
-        "--include-build",
-        action="store_true",
-        default=False,
-        help="Include build information",
     )
 
     parser.add_argument(
@@ -168,33 +122,14 @@ def main() -> None:
     each project directory to synchronize pixi environments with conda
     environment files.
 
-    This function handles multiple project directories and provides
-    appropriate error handling and logging for the CLI experience.
-
     Raises
     ------
     SystemExit
         If no valid project directories are found or if critical errors occur.
-
-    Examples
-    --------
-    Command-line usage:
-        $ pixi_sync_environment pixi.toml
-        $ pixi_sync_environment --name myenv --include-pip-packages pixi.toml
-        $ pixi_sync_environment --environment dev pyproject.toml
-        $ pixi_sync_environment --check pixi.toml
-
-    Notes
-    -----
-    - Supports processing multiple project directories in a single run
-    - Continues processing remaining directories even if one fails
-    - Uses logging for user feedback instead of print statements
-    - Exit code 1 indicates failure, 0 indicates success
     """
     try:
         args = get_parser().parse_args()
 
-        # Find and validate project directories
         try:
             project_dirs = find_project_dir(args.input_files)
         except ValueError as err:
@@ -205,7 +140,6 @@ def main() -> None:
             logger.error("No valid project directories found")
             sys.exit(1)
 
-        # Process each project directory
         success_count = 0
         in_sync_count = 0
         total_count = len(project_dirs)
@@ -221,12 +155,7 @@ def main() -> None:
                     project_dir,
                     environment=args.environment,
                     environment_file=args.environment_file,
-                    explicit=args.explicit,
                     name=args.name,
-                    prefix=args.prefix,
-                    include_pip_packages=args.include_pip_packages,
-                    include_conda_channels=args.include_conda_channels,
-                    include_build=args.include_build,
                     check=args.check,
                     show_diff_callback=_show_diff if args.check else None,
                 )
@@ -246,9 +175,7 @@ def main() -> None:
                 logger.error("Unexpected error in %s: %s", project_dir, err)
                 logger.debug("Full traceback:", exc_info=True)
 
-        # Report final status
         if args.check:
-            # In check mode, report sync status
             if in_sync_count == total_count:
                 logger.info("All %d directories are in sync", total_count)
             elif in_sync_count > 0:
@@ -262,7 +189,6 @@ def main() -> None:
                 logger.error("No directories in sync (%d checked)", total_count)
                 sys.exit(1)
         else:
-            # In sync mode, report success/failure
             if success_count == total_count:
                 logger.info(
                     "Successfully synced %d/%d directories", success_count, total_count

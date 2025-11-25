@@ -27,13 +27,8 @@ class TestGetParser:
         assert len(args.input_files) == 1
         assert args.input_files[0] == Path("pixi.toml")
         assert args.environment_file == "environment.yml"
-        assert args.explicit is False
         assert args.name is None
-        assert args.prefix is None
         assert args.environment == "default"
-        assert args.include_pip_packages is False
-        assert args.include_conda_channels is True
-        assert args.include_build is False
         assert args.check is False
 
     def test_parse_check_flag(self):
@@ -42,13 +37,6 @@ class TestGetParser:
         args = parser.parse_args(["--check", "pixi.toml"])
 
         assert args.check is True
-
-    def test_parse_explicit_flag(self):
-        """Test that --explicit flag is parsed correctly."""
-        parser = get_parser()
-        args = parser.parse_args(["--explicit", "pixi.toml"])
-
-        assert args.explicit is True
 
     def test_parse_environment_file(self):
         """Test custom environment file name."""
@@ -64,40 +52,12 @@ class TestGetParser:
 
         assert args.name == "myenv"
 
-    def test_parse_prefix(self):
-        """Test custom environment prefix."""
-        parser = get_parser()
-        args = parser.parse_args(["--prefix", "/opt/env", "pixi.toml"])
-
-        assert args.prefix == "/opt/env"
-
     def test_parse_environment(self):
         """Test custom pixi environment."""
         parser = get_parser()
         args = parser.parse_args(["--environment", "dev", "pixi.toml"])
 
         assert args.environment == "dev"
-
-    def test_parse_include_pip_packages(self):
-        """Test --include-pip-packages flag."""
-        parser = get_parser()
-        args = parser.parse_args(["--include-pip-packages", "pixi.toml"])
-
-        assert args.include_pip_packages is True
-
-    def test_parse_no_include_conda_channels(self):
-        """Test --no-include-conda-channels flag."""
-        parser = get_parser()
-        args = parser.parse_args(["--no-include-conda-channels", "pixi.toml"])
-
-        assert args.include_conda_channels is False
-
-    def test_parse_include_build(self):
-        """Test --include-build flag."""
-        parser = get_parser()
-        args = parser.parse_args(["--include-build", "pixi.toml"])
-
-        assert args.include_build is True
 
     def test_parse_multiple_input_files(self):
         """Test parsing multiple input files."""
@@ -115,31 +75,20 @@ class TestGetParser:
         args = parser.parse_args(
             [
                 "--check",
-                "--explicit",
                 "--environment-file",
                 "custom.yml",
                 "--name",
                 "myenv",
-                "--prefix",
-                "/opt/env",
                 "--environment",
                 "dev",
-                "--include-pip-packages",
-                "--no-include-conda-channels",
-                "--include-build",
                 "pixi.toml",
             ]
         )
 
         assert args.check is True
-        assert args.explicit is True
         assert args.environment_file == "custom.yml"
         assert args.name == "myenv"
-        assert args.prefix == "/opt/env"
         assert args.environment == "dev"
-        assert args.include_pip_packages is True
-        assert args.include_conda_channels is False
-        assert args.include_build is True
 
 
 class TestShowDiff:
@@ -169,7 +118,6 @@ class TestShowDiff:
             "current environment.yml" in captured.out
             or "new environment.yml" in captured.out
         )
-        # Should contain diff markers
         assert "-" in captured.out or "+" in captured.out
 
     def test_show_diff_no_output_when_same(self, capsys):
@@ -179,7 +127,6 @@ class TestShowDiff:
         _show_diff(env_dict, env_dict, "environment.yml")
 
         captured = capsys.readouterr()
-        # Should not output differences when they're the same
         assert "Differences" not in captured.out
 
 
@@ -198,11 +145,9 @@ class TestMain:
         mock_find_dirs.return_value = [tmp_project_dir]
         mock_sync.return_value = True
 
-        # Should complete without raising SystemExit on success
         try:
             main()
         except SystemExit as exc:
-            # If it does exit, should be code 0
             assert exc.code is None or exc.code == 0
 
     @patch("pixi_sync_environment.cli.pixi_sync_environment")
@@ -217,13 +162,11 @@ class TestMain:
             ["pixi_sync_environment", "--check", str(tmp_project_dir / "pixi.toml")],
         )
         mock_find_dirs.return_value = [tmp_project_dir]
-        mock_sync.return_value = True  # Files in sync
+        mock_sync.return_value = True
 
-        # Should complete without raising SystemExit on success
         try:
             main()
         except SystemExit as exc:
-            # If it does exit, should be code 0
             assert exc.code is None or exc.code == 0
 
     @patch("pixi_sync_environment.cli.pixi_sync_environment")
@@ -238,7 +181,7 @@ class TestMain:
             ["pixi_sync_environment", "--check", str(tmp_project_dir / "pixi.toml")],
         )
         mock_find_dirs.return_value = [tmp_project_dir]
-        mock_sync.return_value = False  # Files out of sync
+        mock_sync.return_value = False
 
         with pytest.raises(SystemExit) as exc_info:
             main()
@@ -268,11 +211,9 @@ class TestMain:
         mock_find_dirs.return_value = [dir1, dir2]
         mock_sync.return_value = True
 
-        # Should complete without raising SystemExit on success
         try:
             main()
         except SystemExit as exc:
-            # If it does exit, should be code 0
             assert exc.code is None or exc.code == 0
 
         assert mock_sync.call_count == 2
@@ -298,7 +239,6 @@ class TestMain:
             ],
         )
         mock_find_dirs.return_value = [dir1, dir2]
-        # First succeeds, second raises error
         mock_sync.side_effect = [True, PixiError("test error")]
 
         with pytest.raises(SystemExit) as exc_info:
@@ -425,39 +365,25 @@ class TestMain:
             [
                 "pixi_sync_environment",
                 "--check",
-                "--explicit",
                 "--environment-file",
                 "custom.yml",
                 "--name",
                 "myenv",
-                "--prefix",
-                "/opt/env",
                 "--environment",
                 "dev",
-                "--include-pip-packages",
-                "--no-include-conda-channels",
-                "--include-build",
                 str(tmp_project_dir / "pixi.toml"),
             ],
         )
         mock_find_dirs.return_value = [tmp_project_dir]
         mock_sync.return_value = True
 
-        # Should complete without raising SystemExit on success
         try:
             main()
         except SystemExit as exc:
-            # If it does exit, should be code 0
             assert exc.code is None or exc.code == 0
 
-        # Verify all arguments were passed
         call_kwargs = mock_sync.call_args[1]
         assert call_kwargs["environment"] == "dev"
         assert call_kwargs["environment_file"] == "custom.yml"
-        assert call_kwargs["explicit"] is True
         assert call_kwargs["name"] == "myenv"
-        assert call_kwargs["prefix"] == "/opt/env"
-        assert call_kwargs["include_pip_packages"] is True
-        assert call_kwargs["include_conda_channels"] is False
-        assert call_kwargs["include_build"] is True
         assert call_kwargs["check"] is True
