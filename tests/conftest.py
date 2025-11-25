@@ -1,10 +1,6 @@
 """Pytest configuration and shared fixtures."""
 
-import json
-
 import pytest
-
-from pixi_sync_environment.package_info import PackageInfo
 
 
 @pytest.fixture
@@ -114,122 +110,35 @@ dependencies:
 
 
 @pytest.fixture
-def sample_conda_packages():
-    """Create a list of sample conda PackageInfo objects.
-
-    Returns
-    -------
-    list[PackageInfo]
-        List of conda packages.
-    """
-    return [
-        PackageInfo(
-            name="python",
-            version="3.10.0",
-            size_bytes=12345678,
-            build="h1234567_0",
-            kind="conda",
-            source="conda-forge",
-            is_explicit=True,
-        ),
-        PackageInfo(
-            name="pyyaml",
-            version="6.0.1",
-            size_bytes=234567,
-            build="py310h9876543_0",
-            kind="conda",
-            source="conda-forge",
-            is_explicit=True,
-        ),
-        PackageInfo(
-            name="libffi",
-            version="3.4.2",
-            size_bytes=56789,
-            build="h0987654_5",
-            kind="conda",
-            source="conda-forge",
-            is_explicit=False,
-        ),
-    ]
-
-
-@pytest.fixture
-def sample_pypi_packages():
-    """Create a list of sample PyPI PackageInfo objects.
-
-    Returns
-    -------
-    list[PackageInfo]
-        List of PyPI packages.
-    """
-    return [
-        PackageInfo(
-            name="requests",
-            version="2.31.0",
-            size_bytes=123456,
-            build=None,
-            kind="pypi",
-            source="https://pypi.org/simple",
-            is_explicit=True,
-        ),
-        PackageInfo(
-            name="urllib3",
-            version="2.0.7",
-            size_bytes=98765,
-            build=None,
-            kind="pypi",
-            source="https://pypi.org/simple",
-            is_explicit=False,
-        ),
-    ]
-
-
-@pytest.fixture
-def sample_mixed_packages(sample_conda_packages, sample_pypi_packages):
-    """Create a list of mixed conda and PyPI packages.
-
-    Parameters
-    ----------
-    sample_conda_packages : list[PackageInfo]
-        Conda packages fixture.
-    sample_pypi_packages : list[PackageInfo]
-        PyPI packages fixture.
-
-    Returns
-    -------
-    list[PackageInfo]
-        Combined list of packages.
-    """
-    return sample_conda_packages + sample_pypi_packages
-
-
-@pytest.fixture
-def mock_pixi_list_output():
-    """Create mock JSON output from pixi list command.
+def mock_pixi_export_output():
+    """Create mock YAML output from pixi workspace export command.
 
     Returns
     -------
     str
-        JSON string representing pixi list output.
+        YAML string representing pixi workspace export output.
     """
-    packages = [
-        {
-            "name": "python",
-            "version": "3.10.0",
-            "size_bytes": 12345678,
-            "build": "h1234567_0",
-            "kind": "conda",
-            "source": "conda-forge",
-            "is_explicit": True,
-        },
-        {
-            "name": "pyyaml",
-            "version": "6.0.1",
-            "size_bytes": 234567,
-            "build": "py310h9876543_0",
-            "kind": "conda",
-            "source": "conda-forge",
-            "is_explicit": True,
-        },
-    ]
-    return json.dumps(packages)
+    return """name: default
+channels:
+- conda-forge
+- nodefaults
+dependencies:
+- python >=3.10
+- pyyaml >=6.0
+"""
+
+
+@pytest.fixture
+def mock_pixi_export_dict():
+    """Create mock dict output from pixi workspace export command.
+
+    Returns
+    -------
+    dict
+        Dictionary representing parsed pixi workspace export output.
+    """
+    return {
+        "name": "default",
+        "channels": ["conda-forge", "nodefaults"],
+        "dependencies": ["python >=3.10", "pyyaml >=6.0"],
+    }
