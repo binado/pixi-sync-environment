@@ -1,3 +1,9 @@
+## v0.3.0 (2025-11-24)
+
+### Feat
+
+- refactor code to use native pixi workspace export command (#6)
+
 ## v0.2.1 (2025-11-23)
 
 ### Fix
