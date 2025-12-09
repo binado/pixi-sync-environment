@@ -3,319 +3,192 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+import yaml
 
 from pixi_sync_environment import pixi_sync_environment
 from pixi_sync_environment.pixi_environment import PixiError
 
 
-class TestPixiSyncEnvironmentFileOperations:
-    """Tests for file creation and update operations."""
-
-    @patch("pixi_sync_environment.sync.export_conda_environment")
-    @patch("pixi_sync_environment.sync.get_manifest_path")
-    @patch("pixi_sync_environment.sync.load_environment_file")
-    @patch("pixi_sync_environment.sync.save_environment_file")
-    def test_sync_creates_new_file(
-        self,
-        mock_save,
-        mock_load,
-        mock_get_manifest,
-        mock_export,
-        tmp_project_dir,
-    ):
-        """Test that sync creates environment.yml when it doesn't exist."""
-        mock_load.return_value = None
-        mock_get_manifest.return_value = tmp_project_dir / "pixi.toml"
-        mock_export.return_value = {"name": "test", "dependencies": ["python"]}
-
-        result = pixi_sync_environment(tmp_project_dir)
-
-        assert result is True
-        mock_save.assert_called_once()
-
-    @patch("pixi_sync_environment.sync.export_conda_environment")
-    @patch("pixi_sync_environment.sync.get_manifest_path")
-    @patch("pixi_sync_environment.sync.load_environment_file")
-    @patch("pixi_sync_environment.sync.save_environment_file")
-    def test_sync_updates_different_file(
-        self,
-        mock_save,
-        mock_load,
-        mock_get_manifest,
-        mock_export,
-        tmp_project_dir,
-    ):
-        """Test that sync updates environment.yml when content differs."""
-        mock_load.return_value = {"name": "old", "dependencies": ["python"]}
-        mock_get_manifest.return_value = tmp_project_dir / "pixi.toml"
-        mock_export.return_value = {"name": "new", "dependencies": ["python=3.10"]}
-
-        result = pixi_sync_environment(tmp_project_dir)
-
-        assert result is True
-        mock_save.assert_called_once()
-
-    @patch("pixi_sync_environment.sync.export_conda_environment")
-    @patch("pixi_sync_environment.sync.get_manifest_path")
-    @patch("pixi_sync_environment.sync.load_environment_file")
-    @patch("pixi_sync_environment.sync.save_environment_file")
-    def test_sync_preserves_identical_file(
-        self,
-        mock_save,
-        mock_load,
-        mock_get_manifest,
-        mock_export,
-        tmp_project_dir,
-    ):
-        """Test that sync doesn't modify file when content is identical."""
-        env_data = {"name": "test", "dependencies": ["python=3.10"]}
-        mock_load.return_value = env_data
-        mock_get_manifest.return_value = tmp_project_dir / "pixi.toml"
-        mock_export.return_value = env_data
-
-        result = pixi_sync_environment(tmp_project_dir)
-
-        assert result is True
-        mock_save.assert_not_called()
+@pytest.fixture
+def export_mock():
+    """Fixture to mock export_conda_environment."""
+    with patch("pixi_sync_environment.sync.export_conda_environment") as mock:
+        yield mock
 
 
-class TestPixiSyncEnvironmentCheckMode:
-    """Tests for check mode (read-only) operation."""
+@pytest.mark.parametrize(
+    "initial_content, exported_content",
+    [
+        (None, {"name": "new", "dependencies": ["python"]}),  # New file
+        (
+            {"name": "old", "dependencies": ["python"]},
+            {"name": "new", "dependencies": ["python", "pip"]},
+        ),  # Update
+        (
+            {"name": "same", "dependencies": ["python"]},
+            {"name": "same", "dependencies": ["python"]},
+        ),  # No change
+    ],
+)
+def test_sync_operations(
+    tmp_project_dir,
+    sample_pixi_toml,
+    export_mock,
+    initial_content,
+    exported_content,
+):
+    """Test sync operations (create, update, no-op) with real files."""
+    # Setup initial state
+    if initial_content:
+        env_file = tmp_project_dir / "environment.yml"
+        env_file.write_text(yaml.dump(initial_content))
 
-    @patch("pixi_sync_environment.sync.export_conda_environment")
-    @patch("pixi_sync_environment.sync.get_manifest_path")
-    @patch("pixi_sync_environment.sync.load_environment_file")
-    @patch("pixi_sync_environment.sync.save_environment_file")
-    def test_sync_check_mode_different(
-        self,
-        mock_save,
-        mock_load,
-        mock_get_manifest,
-        mock_export,
-        tmp_project_dir,
-    ):
-        """Test check mode returns False when files differ."""
-        mock_load.return_value = {"name": "old", "dependencies": ["python"]}
-        mock_get_manifest.return_value = tmp_project_dir / "pixi.toml"
-        mock_export.return_value = {"name": "new", "dependencies": ["python=3.10"]}
+    # Mock the export
+    export_mock.return_value = exported_content
 
-        result = pixi_sync_environment(tmp_project_dir, check=True)
+    # Run sync
+    result = pixi_sync_environment(tmp_project_dir)
 
-        assert result is False
-        mock_save.assert_not_called()
+    assert result is True
 
-    @patch("pixi_sync_environment.sync.export_conda_environment")
-    @patch("pixi_sync_environment.sync.get_manifest_path")
-    @patch("pixi_sync_environment.sync.load_environment_file")
-    @patch("pixi_sync_environment.sync.save_environment_file")
-    def test_sync_check_mode_identical(
-        self,
-        mock_save,
-        mock_load,
-        mock_get_manifest,
-        mock_export,
-        tmp_project_dir,
-    ):
-        """Test check mode returns True when files match."""
-        env_data = {"name": "test", "dependencies": ["python=3.10"]}
-        mock_load.return_value = env_data
-        mock_get_manifest.return_value = tmp_project_dir / "pixi.toml"
-        mock_export.return_value = env_data
+    # Verify result on disk
+    env_file = tmp_project_dir / "environment.yml"
+    assert env_file.exists()
 
-        result = pixi_sync_environment(tmp_project_dir, check=True)
+    with open(env_file) as f:
+        saved_content = yaml.safe_load(f)
 
-        assert result is True
-        mock_save.assert_not_called()
+    assert saved_content == exported_content
 
-    @patch("pixi_sync_environment.sync.export_conda_environment")
-    @patch("pixi_sync_environment.sync.get_manifest_path")
-    @patch("pixi_sync_environment.sync.load_environment_file")
-    def test_sync_check_mode_calls_diff_callback(
-        self,
-        mock_load,
-        mock_get_manifest,
-        mock_export,
-        tmp_project_dir,
-    ):
-        """Test that show_diff_callback is invoked in check mode when out of sync."""
-        mock_load.return_value = {"name": "old"}
-        mock_get_manifest.return_value = tmp_project_dir / "pixi.toml"
-        mock_export.return_value = {"name": "new"}
 
-        callback = MagicMock()
-        result = pixi_sync_environment(
-            tmp_project_dir, check=True, show_diff_callback=callback
-        )
+@pytest.mark.parametrize(
+    "initial_content, exported_content, expected_result",
+    [
+        (None, {"name": "new"}, False),  # Missing file -> False
+        (
+            {"name": "old"},
+            {"name": "new"},
+            False,
+        ),  # Different content -> False
+        (
+            {"name": "same"},
+            {"name": "same"},
+            True,
+        ),  # Same content -> True
+    ],
+)
+def test_sync_check_mode(
+    tmp_project_dir,
+    sample_pixi_toml,
+    export_mock,
+    initial_content,
+    exported_content,
+    expected_result,
+):
+    """Test check mode behavior without modifying files."""
+    # Setup initial state
+    if initial_content:
+        env_file = tmp_project_dir / "environment.yml"
+        env_file.write_text(yaml.dump(initial_content))
 
-        assert result is False
-        callback.assert_called_once()
-        call_args = callback.call_args[0]
-        assert call_args[0] == {"name": "old"}
-        assert call_args[1] == {"name": "new"}
-        assert call_args[2] == "environment.yml"
+    # Mock the export
+    export_mock.return_value = exported_content
 
-    @patch("pixi_sync_environment.sync.export_conda_environment")
-    @patch("pixi_sync_environment.sync.get_manifest_path")
-    @patch("pixi_sync_environment.sync.load_environment_file")
-    def test_sync_check_mode_no_callback_when_synced(
-        self,
-        mock_load,
-        mock_get_manifest,
-        mock_export,
-        tmp_project_dir,
-    ):
-        """Test that callback is not called when files are in sync."""
-        env_data = {"name": "test"}
-        mock_load.return_value = env_data
-        mock_get_manifest.return_value = tmp_project_dir / "pixi.toml"
-        mock_export.return_value = env_data
+    # Run sync in check mode
+    result = pixi_sync_environment(tmp_project_dir, check=True)
 
-        callback = MagicMock()
-        result = pixi_sync_environment(
-            tmp_project_dir, check=True, show_diff_callback=callback
-        )
+    assert result == expected_result
 
-        assert result is True
-        callback.assert_not_called()
+    # Verify NO changes on disk
+    env_file = tmp_project_dir / "environment.yml"
+    if initial_content is None:
+        assert not env_file.exists()
+    else:
+        with open(env_file) as f:
+            current_content = yaml.safe_load(f)
+        assert current_content == initial_content
+
+
+def test_sync_check_mode_calls_diff_callback(
+    tmp_project_dir, sample_pixi_toml, export_mock
+):
+    """Test that callback is invoked when out of sync."""
+    initial = {"name": "old"}
+    exported = {"name": "new"}
+
+    (tmp_project_dir / "environment.yml").write_text(yaml.dump(initial))
+    export_mock.return_value = exported
+
+    callback = MagicMock()
+    pixi_sync_environment(tmp_project_dir, check=True, show_diff_callback=callback)
+
+    callback.assert_called_once()
+    args = callback.call_args[0]
+    assert args[0] == initial
+    assert args[1] == exported
 
 
 class TestPixiSyncEnvironmentErrorHandling:
     """Tests for error handling."""
 
-    @patch("pixi_sync_environment.sync.export_conda_environment")
-    @patch("pixi_sync_environment.sync.get_manifest_path")
-    @patch("pixi_sync_environment.sync.load_environment_file")
     def test_sync_raises_pixi_error(
-        self, mock_load, mock_get_manifest, mock_export, tmp_project_dir
+        self, tmp_project_dir, sample_pixi_toml, export_mock
     ):
         """Test that PixiError is propagated."""
-        mock_load.return_value = None
-        mock_get_manifest.return_value = tmp_project_dir / "pixi.toml"
-        mock_export.side_effect = PixiError("pixi failed")
+        export_mock.side_effect = PixiError("pixi failed")
 
         with pytest.raises(PixiError, match="pixi failed"):
             pixi_sync_environment(tmp_project_dir)
 
-    @patch("pixi_sync_environment.sync.get_manifest_path")
-    @patch("pixi_sync_environment.sync.load_environment_file")
-    def test_sync_raises_value_error(
-        self, mock_load, mock_get_manifest, tmp_project_dir
-    ):
+    def test_sync_raises_value_error(self, tmp_project_dir):
         """Test that ValueError is propagated when no manifest found."""
-        mock_load.return_value = None
-        mock_get_manifest.side_effect = ValueError("No manifest")
-
-        with pytest.raises(ValueError, match="No manifest"):
+        # Don't create pixi.toml, creating a situation where manifest is missing
+        with pytest.raises(ValueError, match="Could not find manifest"):
             pixi_sync_environment(tmp_project_dir)
 
 
 class TestPixiSyncEnvironmentOptions:
     """Tests for various configuration options."""
 
-    @patch("pixi_sync_environment.sync.export_conda_environment")
-    @patch("pixi_sync_environment.sync.get_manifest_path")
-    @patch("pixi_sync_environment.sync.load_environment_file")
-    @patch("pixi_sync_environment.sync.save_environment_file")
-    def test_sync_with_all_options(
-        self,
-        mock_save,
-        mock_load,
-        mock_get_manifest,
-        mock_export,
-        tmp_project_dir,
+    def test_sync_passes_options_to_export(
+        self, tmp_project_dir, sample_pixi_toml, export_mock
     ):
-        """Test that all options are passed through correctly."""
-        mock_load.return_value = None
-        mock_get_manifest.return_value = tmp_project_dir / "pixi.toml"
-        mock_export.return_value = {"name": "test"}
+        """Test that options are passed to export_conda_environment."""
+        export_mock.return_value = {"name": "test"}
 
         pixi_sync_environment(
             tmp_project_dir,
             environment="dev",
-            environment_file="custom.yml",
             name="myenv",
         )
 
-        mock_export.assert_called_once()
-        call_kwargs = mock_export.call_args[1]
+        export_mock.assert_called_once()
+        call_kwargs = export_mock.call_args[1]
         assert call_kwargs["environment"] == "dev"
         assert call_kwargs["name"] == "myenv"
 
-    @patch("pixi_sync_environment.sync.export_conda_environment")
-    @patch("pixi_sync_environment.sync.get_manifest_path")
-    @patch("pixi_sync_environment.sync.load_environment_file")
-    @patch("pixi_sync_environment.sync.save_environment_file")
-    def test_sync_environment_name(
-        self,
-        mock_save,
-        mock_load,
-        mock_get_manifest,
-        mock_export,
-        tmp_project_dir,
-    ):
-        """Test that custom environment is used."""
-        mock_load.return_value = None
-        mock_get_manifest.return_value = tmp_project_dir / "pixi.toml"
-        mock_export.return_value = {"dependencies": []}
-
-        pixi_sync_environment(tmp_project_dir, environment="dev")
-
-        call_kwargs = mock_export.call_args[1]
-        assert call_kwargs["environment"] == "dev"
-
-    @patch("pixi_sync_environment.sync.export_conda_environment")
-    @patch("pixi_sync_environment.sync.get_manifest_path")
-    @patch("pixi_sync_environment.sync.load_environment_file")
-    @patch("pixi_sync_environment.sync.save_environment_file")
     def test_sync_custom_environment_file(
-        self,
-        mock_save,
-        mock_load,
-        mock_get_manifest,
-        mock_export,
-        tmp_project_dir,
+        self, tmp_project_dir, sample_pixi_toml, export_mock
     ):
         """Test using a custom environment filename."""
-        mock_load.return_value = None
-        mock_get_manifest.return_value = tmp_project_dir / "pixi.toml"
-        mock_export.return_value = {"dependencies": []}
+        export_mock.return_value = {"name": "test"}
+        custom_file = "custom.yml"
 
-        pixi_sync_environment(tmp_project_dir, environment_file="custom.yml")
+        pixi_sync_environment(tmp_project_dir, environment_file=custom_file)
 
-        load_call_args = mock_load.call_args[0]
-        assert load_call_args[1] == "custom.yml"
-
-        save_call_kwargs = mock_save.call_args[1]
-        assert save_call_kwargs["environment_file"] == "custom.yml"
+        assert (tmp_project_dir / custom_file).exists()
 
 
-class TestPixiSyncEnvironmentIdempotency:
-    """Tests for idempotent behavior."""
+def test_sync_idempotent(tmp_project_dir, sample_pixi_toml, export_mock):
+    """Test that running sync twice produces consistent results."""
+    export_mock.return_value = {"name": "test", "dependencies": ["python"]}
 
-    @patch("pixi_sync_environment.sync.export_conda_environment")
-    @patch("pixi_sync_environment.sync.get_manifest_path")
-    @patch("pixi_sync_environment.sync.load_environment_file")
-    @patch("pixi_sync_environment.sync.save_environment_file")
-    def test_sync_idempotent(
-        self,
-        mock_save,
-        mock_load,
-        mock_get_manifest,
-        mock_export,
-        tmp_project_dir,
-    ):
-        """Test that running sync twice doesn't modify file on second run."""
-        env_data = {"name": "test", "dependencies": ["python"]}
+    # First run: creates file
+    result1 = pixi_sync_environment(tmp_project_dir)
+    assert result1 is True
 
-        mock_load.return_value = None
-        mock_get_manifest.return_value = tmp_project_dir / "pixi.toml"
-        mock_export.return_value = env_data
+    # Second run: no change, still True
+    result2 = pixi_sync_environment(tmp_project_dir)
+    assert result2 is True
 
-        result1 = pixi_sync_environment(tmp_project_dir)
-        assert result1 is True
-        assert mock_save.call_count == 1
-
-        mock_load.return_value = env_data
-        result2 = pixi_sync_environment(tmp_project_dir)
-        assert result2 is True
-        assert mock_save.call_count == 1
+    assert (tmp_project_dir / "environment.yml").exists()
