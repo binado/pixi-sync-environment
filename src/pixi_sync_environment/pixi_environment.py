@@ -7,6 +7,7 @@ environment.yml format using pixi's built-in export functionality.
 import logging
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -116,6 +117,12 @@ def export_conda_environment(
         environment or "default",
     )
 
+    # Use a temporary file instead of stdout due to pixi export issue
+    with tempfile.NamedTemporaryFile(
+        mode="w+", suffix=".yml", delete=False
+    ) as tmp_file:
+        temp_path = tmp_file.name
+
     args = [
         "pixi",
         "workspace",
@@ -123,7 +130,7 @@ def export_conda_environment(
         "conda-environment",
         "--manifest-path",
         str(manifest_path),
-        "-",  # Output to stdout
+        temp_path,  # Output to temporary file
     ]
 
     if environment:
@@ -143,6 +150,23 @@ def export_conda_environment(
             check=True,
             timeout=60,
         )
+
+        # Read the exported environment from the temporary file
+        try:
+            with open(temp_path, "r") as f:
+                result_stdout = f.read()
+        except FileNotFoundError:
+            raise PixiError(
+                f"pixi export failed to create output file at {temp_path}",
+                stdout=result.stdout,
+                stderr=result.stderr,
+            )
+        finally:
+            # Clean up the temporary file
+            try:
+                Path(temp_path).unlink()
+            except FileNotFoundError:
+                pass
     except subprocess.CalledProcessError as err:
         logger.error("pixi command failed with code %d", err.returncode)
         logger.error("stdout: %s", err.stdout)
@@ -175,13 +199,13 @@ def export_conda_environment(
         ) from err
 
     try:
-        environment_dict = yaml.safe_load(result.stdout)
+        environment_dict = yaml.safe_load(result_stdout)
         logger.info("Successfully exported conda environment from pixi")
         return environment_dict
     except yaml.YAMLError as err:
-        logger.error("Invalid YAML output from pixi: %s", result.stdout[:200])
+        logger.error("Invalid YAML output from pixi: %s", result_stdout[:200])
         raise PixiError(
             f"pixi command returned invalid YAML: {err}",
-            stdout=result.stdout,
+            stdout=result_stdout,
             stderr=result.stderr,
         ) from err
