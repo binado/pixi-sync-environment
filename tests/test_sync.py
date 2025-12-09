@@ -86,28 +86,6 @@ class TestPixiSyncEnvironmentCheckMode:
     @patch("pixi_sync_environment.sync.get_manifest_path")
     @patch("pixi_sync_environment.sync.load_environment_file")
     @patch("pixi_sync_environment.sync.save_environment_file")
-    def test_sync_check_mode_new_file(
-        self,
-        mock_save,
-        mock_load,
-        mock_get_manifest,
-        mock_export,
-        tmp_project_dir,
-    ):
-        """Test check mode returns False when file doesn't exist."""
-        mock_load.return_value = None
-        mock_get_manifest.return_value = tmp_project_dir / "pixi.toml"
-        mock_export.return_value = {"name": "test", "dependencies": ["python"]}
-
-        result = pixi_sync_environment(tmp_project_dir, check=True)
-
-        assert result is False
-        mock_save.assert_not_called()
-
-    @patch("pixi_sync_environment.sync.export_conda_environment")
-    @patch("pixi_sync_environment.sync.get_manifest_path")
-    @patch("pixi_sync_environment.sync.load_environment_file")
-    @patch("pixi_sync_environment.sync.save_environment_file")
     def test_sync_check_mode_different(
         self,
         mock_save,

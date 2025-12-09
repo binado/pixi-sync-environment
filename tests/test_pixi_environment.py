@@ -1,6 +1,7 @@
 """Tests for the pixi_environment module."""
 
 import subprocess
+import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -10,6 +11,22 @@ from pixi_sync_environment.pixi_environment import (
     check_pixi_availability,
     export_conda_environment,
 )
+
+
+def mock_pixi_export_with_temp_file(mock_run, mock_export_output):
+    """Helper to mock pixi export that uses temporary files."""
+
+    def side_effect(*args, **kwargs):
+        # Create a temporary file with the mock output
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yml", delete=False
+        ) as tmp_file:
+            tmp_file.write(mock_export_output)
+        # Return mock result
+        return MagicMock(stdout="", stderr="", returncode=0)
+
+    mock_run.side_effect = side_effect
+    return None  # tmp_path is not accessible here, but the file will be created
 
 
 class TestCheckPixiAvailability:
@@ -61,20 +78,35 @@ class TestCheckPixiAvailability:
 class TestExportCondaEnvironment:
     """Tests for export_conda_environment function."""
 
+    @patch("pixi_sync_environment.pixi_environment.tempfile.NamedTemporaryFile")
     @patch("pixi_sync_environment.pixi_environment.check_pixi_availability")
     @patch("pixi_sync_environment.pixi_environment.subprocess.run")
     def test_export_success(
-        self, mock_run, mock_check_pixi, tmp_project_dir, mock_pixi_export_output
+        self,
+        mock_run,
+        mock_check_pixi,
+        mock_temp_file,
+        tmp_project_dir,
+        mock_pixi_export_output,
     ):
         """Test successful export from pixi."""
         manifest_path = tmp_project_dir / "pixi.toml"
         manifest_path.touch()
 
-        mock_run.return_value = MagicMock(
-            stdout=mock_pixi_export_output, stderr="", returncode=0
-        )
+        # Mock the temporary file
+        mock_temp_file.return_value.__enter__ = MagicMock()
+        mock_temp_file.return_value.__exit__ = MagicMock()
+        mock_temp_file.return_value.__enter__.return_value.name = "/tmp/test.yml"
 
-        result = export_conda_environment(manifest_path)
+        # Mock the subprocess result - the temp file will contain our mock output
+        mock_run.return_value = MagicMock(stdout="", stderr="", returncode=0)
+
+        # Mock the file reading to return our expected content
+        with patch("builtins.open", return_value=MagicMock()) as mock_open:
+            mock_open.return_value.__enter__.return_value.read.return_value = (
+                mock_pixi_export_output
+            )
+            result = export_conda_environment(manifest_path)
 
         assert "name" in result
         assert "channels" in result
@@ -120,19 +152,30 @@ class TestExportCondaEnvironment:
         assert "--name" in call_args
         assert "custom-name" in call_args
 
+    @patch("pixi_sync_environment.pixi_environment.tempfile.NamedTemporaryFile")
     @patch("pixi_sync_environment.pixi_environment.check_pixi_availability")
     @patch("pixi_sync_environment.pixi_environment.subprocess.run")
-    def test_export_invalid_yaml(self, mock_run, mock_check_pixi, tmp_project_dir):
+    def test_export_invalid_yaml(
+        self, mock_run, mock_check_pixi, mock_temp_file, tmp_project_dir
+    ):
         """Test that PixiError is raised when pixi returns invalid YAML."""
         manifest_path = tmp_project_dir / "pixi.toml"
         manifest_path.touch()
 
-        mock_run.return_value = MagicMock(
-            stdout="{ invalid: yaml: :", stderr="", returncode=0
-        )
+        # Mock the temporary file
+        mock_temp_file.return_value.__enter__ = MagicMock()
+        mock_temp_file.return_value.__exit__ = MagicMock()
+        mock_temp_file.return_value.__enter__.return_value.name = "/tmp/test.yml"
 
-        with pytest.raises(PixiError, match="invalid YAML"):
-            export_conda_environment(manifest_path)
+        mock_run.return_value = MagicMock(stdout="", stderr="", returncode=0)
+
+        # Mock the file reading to return invalid YAML
+        with patch("builtins.open", return_value=MagicMock()) as mock_open:
+            mock_open.return_value.__enter__.return_value.read.return_value = (
+                "{ invalid: yaml: :"
+            )
+            with pytest.raises(PixiError, match="invalid YAML"):
+                export_conda_environment(manifest_path)
 
     @patch("pixi_sync_environment.pixi_environment.check_pixi_availability")
     @patch("pixi_sync_environment.pixi_environment.subprocess.run")
@@ -188,20 +231,36 @@ class TestExportCondaEnvironment:
         with pytest.raises(PixiError, match="timed out"):
             export_conda_environment(manifest_path)
 
+    @patch("pixi_sync_environment.pixi_environment.tempfile.NamedTemporaryFile")
     @patch("pixi_sync_environment.pixi_environment.check_pixi_availability")
     @patch("pixi_sync_environment.pixi_environment.subprocess.run")
-    def test_export_uses_stdout_output(
-        self, mock_run, mock_check_pixi, tmp_project_dir, mock_pixi_export_output
+    def test_export_uses_temp_file(
+        self,
+        mock_run,
+        mock_check_pixi,
+        mock_temp_file,
+        tmp_project_dir,
+        mock_pixi_export_output,
     ):
-        """Test that export outputs to stdout using '-' argument."""
+        """Test that export uses temporary file instead of stdout."""
         manifest_path = tmp_project_dir / "pixi.toml"
         manifest_path.touch()
 
-        mock_run.return_value = MagicMock(
-            stdout=mock_pixi_export_output, stderr="", returncode=0
-        )
+        # Mock the temporary file
+        mock_temp_file.return_value.__enter__ = MagicMock()
+        mock_temp_file.return_value.__exit__ = MagicMock()
+        mock_temp_file.return_value.__enter__.return_value.name = "/tmp/test.yml"
 
-        export_conda_environment(manifest_path)
+        mock_run.return_value = MagicMock(stdout="", stderr="", returncode=0)
+
+        # Mock the file reading to return our expected content
+        with patch("builtins.open", return_value=MagicMock()) as mock_open:
+            mock_open.return_value.__enter__.return_value.read.return_value = (
+                mock_pixi_export_output
+            )
+            export_conda_environment(manifest_path)
 
         call_args = mock_run.call_args[0][0]
-        assert "-" in call_args
+        # Should use temp file path instead of "-"
+        assert "-" not in call_args
+        assert any(".yml" in arg for arg in call_args if isinstance(arg, str))
