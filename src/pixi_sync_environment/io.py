@@ -95,7 +95,7 @@ def load_environment_file(
     path_dir: Path,
     environment_file: str = "environment.yml",
     raise_exception: bool = True,
-) -> dict[str, Any] | list[Any] | None:
+) -> dict[str, Any] | None:
     """Load a YAML environment file.
 
     Attempts to load and parse a YAML environment file from the specified
@@ -113,8 +113,8 @@ def load_environment_file(
 
     Returns
     -------
-    dict or list or None
-        Parsed YAML content as a dictionary or list, or None if the file
+    dict or None
+        Parsed YAML content as a dictionary, or None if the file
         doesn't exist and raise_exception is False.
 
     Raises
@@ -123,6 +123,8 @@ def load_environment_file(
         If the environment file doesn't exist and raise_exception is True.
     yaml.YAMLError
         If the YAML file is malformed and cannot be parsed.
+    TypeError
+        If the loaded YAML content is not a dictionary.
 
     Examples
     --------
@@ -135,7 +137,15 @@ def load_environment_file(
     filepath = path_dir / environment_file
     try:
         with open(filepath, encoding="utf-8") as file:
-            return yaml.safe_load(file)
+            content = yaml.safe_load(file)
+
+            if content is not None and not isinstance(content, dict):
+                raise TypeError(
+                    f"Environment file {environment_file} must be a YAML dictionary, "
+                    f"got {type(content).__name__}"
+                )
+
+            return content
     except FileNotFoundError as err:
         if not raise_exception:
             return None
