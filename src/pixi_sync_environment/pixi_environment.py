@@ -8,6 +8,7 @@ import logging
 import shutil
 import subprocess
 import tempfile
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +37,7 @@ class PixiError(Exception):
         super().__init__(self.message)
 
 
+@lru_cache
 def check_pixi_availability() -> None:
     """Check if pixi command is available and accessible.
 
@@ -117,95 +119,89 @@ def export_conda_environment(
         environment or "default",
     )
 
-    # Use a temporary file instead of stdout due to pixi export issue
-    with tempfile.NamedTemporaryFile(
-        mode="w+", suffix=".yml", delete=False
-    ) as tmp_file:
-        temp_path = tmp_file.name
+    # Use a temporary directory for the output file
+    # This avoids file locking issues on some platforms (Windows)
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        temp_path = Path(tmp_dir) / "env.yml"
 
-    args = [
-        "pixi",
-        "workspace",
-        "export",
-        "conda-environment",
-        "--manifest-path",
-        str(manifest_path),
-        temp_path,  # Output to temporary file
-    ]
+        args = [
+            "pixi",
+            "workspace",
+            "export",
+            "conda-environment",
+            "--manifest-path",
+            str(manifest_path),
+            str(temp_path),
+        ]
 
-    if environment:
-        args.extend(["--environment", environment])
+        if environment:
+            args.extend(["--environment", environment])
 
-    if name:
-        args.extend(["--name", name])
+        if name:
+            args.extend(["--name", name])
 
-    cmd = " ".join(args)
-    logger.info("Running: %s", cmd)
+        cmd = " ".join(args)
+        logger.info("Running: %s", cmd)
 
-    try:
-        result = subprocess.run(
-            args,
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=60,
-        )
-
-        # Read the exported environment from the temporary file
         try:
-            with open(temp_path, "r") as f:
-                result_stdout = f.read()
-        except FileNotFoundError:
-            raise PixiError(
-                f"pixi export failed to create output file at {temp_path}",
-                stdout=result.stdout,
-                stderr=result.stderr,
+            result = subprocess.run(
+                args,
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=60,
             )
-        finally:
-            # Clean up the temporary file
-            try:
-                Path(temp_path).unlink()
-            except FileNotFoundError:
-                pass
-    except subprocess.CalledProcessError as err:
-        logger.error("pixi command failed with code %d", err.returncode)
-        logger.error("stdout: %s", err.stdout)
-        logger.error("stderr: %s", err.stderr)
 
-        if "environment" in err.stderr.lower() and environment:
+            # Read the exported environment from the temporary file
+            if not temp_path.exists():
+                raise PixiError(
+                    f"pixi export failed to create output file at {temp_path}",
+                    stdout=result.stdout,
+                    stderr=result.stderr,
+                )
+
+            with open(temp_path, encoding="utf-8") as f:
+                result_stdout = f.read()
+
+        except subprocess.CalledProcessError as err:
+            logger.error("pixi command failed with code %d", err.returncode)
+            logger.error("stdout: %s", err.stdout)
+            logger.error("stderr: %s", err.stderr)
+
+            if "environment" in err.stderr.lower() and environment:
+                raise PixiError(
+                    f"Environment '{environment}' not found in pixi manifest. "
+                    f"Available environments can be listed with 'pixi info'.",
+                    stdout=err.stdout,
+                    stderr=err.stderr,
+                ) from err
+            elif "manifest" in err.stderr.lower():
+                raise PixiError(
+                    f"Invalid or corrupted pixi manifest at {manifest_path}",
+                    stdout=err.stdout,
+                    stderr=err.stderr,
+                ) from err
+            else:
+                raise PixiError(
+                    f"pixi workspace export command failed: {err.stderr}",
+                    stdout=err.stdout,
+                    stderr=err.stderr,
+                ) from err
+
+        except subprocess.TimeoutExpired as err:
             raise PixiError(
-                f"Environment '{environment}' not found in pixi manifest. "
-                f"Available environments can be listed with 'pixi info'.",
-                stdout=err.stdout,
-                stderr=err.stderr,
-            ) from err
-        elif "manifest" in err.stderr.lower():
-            raise PixiError(
-                f"Invalid or corrupted pixi manifest at {manifest_path}",
-                stdout=err.stdout,
-                stderr=err.stderr,
-            ) from err
-        else:
-            raise PixiError(
-                f"pixi workspace export command failed: {err.stderr}",
-                stdout=err.stdout,
-                stderr=err.stderr,
+                "pixi workspace export command timed out after 60 seconds. "
+                "This may indicate a very large environment or network issues."
             ) from err
 
-    except subprocess.TimeoutExpired as err:
-        raise PixiError(
-            "pixi workspace export command timed out after 60 seconds. "
-            "This may indicate a very large environment or network issues."
-        ) from err
-
-    try:
-        environment_dict = yaml.safe_load(result_stdout)
-        logger.info("Successfully exported conda environment from pixi")
-        return environment_dict
-    except yaml.YAMLError as err:
-        logger.error("Invalid YAML output from pixi: %s", result_stdout[:200])
-        raise PixiError(
-            f"pixi command returned invalid YAML: {err}",
-            stdout=result_stdout,
-            stderr=result.stderr,
-        ) from err
+        try:
+            environment_dict = yaml.safe_load(result_stdout)
+            logger.info("Successfully exported conda environment from pixi")
+            return environment_dict
+        except yaml.YAMLError as err:
+            logger.error("Invalid YAML output from pixi: %s", result_stdout[:200])
+            raise PixiError(
+                f"pixi command returned invalid YAML: {err}",
+                stdout=result_stdout,
+                stderr=result.stderr,
+            ) from err
