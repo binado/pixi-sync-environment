@@ -1,3 +1,9 @@
+## v0.3.1 (2025-12-09)
+
+### Fix
+
+- cli wont create enviromentyml file correctly (#8)
+
 ## v0.3.0 (2025-11-24)
 
 ### Feat
