@@ -16,24 +16,18 @@ from pixi_sync_environment.io import (
 class TestFindProjectDir:
     """Tests for find_project_dir function."""
 
-    def test_find_project_dir_single_file(self, tmp_project_dir):
+    def test_find_project_dir_single_file(self, sample_pixi_toml, tmp_project_dir):
         """Test extracting directory from a single file."""
-        pixi_file = tmp_project_dir / "pixi.toml"
-        pixi_file.touch()
-
-        result = find_project_dir([pixi_file])
+        result = find_project_dir([sample_pixi_toml])
 
         assert len(result) == 1
         assert result[0] == tmp_project_dir
 
-    def test_find_project_dir_multiple_files_same_dir(self, tmp_project_dir):
+    def test_find_project_dir_multiple_files_same_dir(
+        self, sample_pixi_toml, sample_environment_yml, tmp_project_dir
+    ):
         """Test deduplication when multiple files are in same directory."""
-        pixi_file = tmp_project_dir / "pixi.toml"
-        env_file = tmp_project_dir / "environment.yml"
-        pixi_file.touch()
-        env_file.touch()
-
-        result = find_project_dir([pixi_file, env_file])
+        result = find_project_dir([sample_pixi_toml, sample_environment_yml])
 
         assert len(result) == 1
         assert result[0] == tmp_project_dir
@@ -87,34 +81,27 @@ class TestFindProjectDir:
 class TestGetManifestPath:
     """Tests for get_manifest_path function."""
 
-    def test_get_manifest_path_finds_pixi_toml(self, tmp_project_dir):
+    def test_get_manifest_path_finds_pixi_toml(self, sample_pixi_toml, tmp_project_dir):
         """Test that pixi.toml is preferred when it exists."""
-        pixi_file = tmp_project_dir / "pixi.toml"
-        pixi_file.touch()
-
         result = get_manifest_path(tmp_project_dir)
 
-        assert result == pixi_file
+        assert result == sample_pixi_toml
 
-    def test_get_manifest_path_finds_both_prefers_pixi(self, tmp_project_dir):
+    def test_get_manifest_path_finds_both_prefers_pixi(
+        self, sample_pixi_toml, sample_pyproject_toml, tmp_project_dir
+    ):
         """Test that pixi.toml is preferred over pyproject.toml."""
-        pixi_file = tmp_project_dir / "pixi.toml"
-        pyproject_file = tmp_project_dir / "pyproject.toml"
-        pixi_file.touch()
-        pyproject_file.touch()
-
         result = get_manifest_path(tmp_project_dir)
 
-        assert result == pixi_file
+        assert result == sample_pixi_toml
 
-    def test_get_manifest_path_falls_back_to_pyproject(self, tmp_project_dir):
+    def test_get_manifest_path_falls_back_to_pyproject(
+        self, sample_pyproject_toml, tmp_project_dir
+    ):
         """Test fallback to pyproject.toml when pixi.toml doesn't exist."""
-        pyproject_file = tmp_project_dir / "pyproject.toml"
-        pyproject_file.touch()
-
         result = get_manifest_path(tmp_project_dir)
 
-        assert result == pyproject_file
+        assert result == sample_pyproject_toml
 
     def test_get_manifest_path_raises_when_none(self, tmp_project_dir):
         """Test that ValueError is raised when no manifest exists."""
@@ -146,21 +133,15 @@ class TestGetManifestPath:
 class TestLoadEnvironmentFile:
     """Tests for load_environment_file function."""
 
-    def test_load_environment_file_success(self, tmp_project_dir):
+    def test_load_environment_file_success(
+        self, sample_environment_yml, tmp_project_dir
+    ):
         """Test loading a valid YAML environment file."""
-        env_file = tmp_project_dir / "environment.yml"
-        env_data = {
-            "name": "test-env",
-            "channels": ["conda-forge"],
-            "dependencies": ["python=3.10", "numpy=1.24"],
-        }
-        env_file.write_text(yaml.dump(env_data))
-
         result = load_environment_file(tmp_project_dir, "environment.yml")
 
-        assert result == env_data
         assert result["name"] == "test-env"
         assert len(result["dependencies"]) == 2
+        assert "python=3.10.0" in result["dependencies"]
 
     def test_load_environment_file_missing_with_raise(self, tmp_project_dir):
         """Test that FileNotFoundError is raised with raise_exception=True."""
@@ -205,14 +186,12 @@ class TestLoadEnvironmentFile:
         assert result["name"] == "custom"
 
     def test_load_environment_file_with_list(self, tmp_project_dir):
-        """Test that YAML files returning lists are handled."""
+        """Test that YAML files returning lists raise TypeError."""
         env_file = tmp_project_dir / "list.yml"
         env_file.write_text("- item1\n- item2\n- item3")
 
-        result = load_environment_file(tmp_project_dir, "list.yml")
-
-        assert isinstance(result, list)
-        assert len(result) == 3
+        with pytest.raises(TypeError, match="must be a YAML dictionary"):
+            load_environment_file(tmp_project_dir, "list.yml")
 
 
 class TestSaveEnvironmentFile:
@@ -312,13 +291,13 @@ class TestSaveEnvironmentFile:
         assert result["name"] == "custom"
 
     def test_save_environment_file_with_list(self, tmp_project_dir):
-        """Test saving a list (though unusual for environment files)."""
+        """Test saving a list (valid YAML) but loading raises TypeError."""
         list_data = ["item1", "item2", "item3"]
 
         save_environment_file(list_data, tmp_project_dir, "list.yml")
 
-        result = load_environment_file(tmp_project_dir, "list.yml")
-        assert result == list_data
+        with pytest.raises(TypeError, match="must be a YAML dictionary"):
+            load_environment_file(tmp_project_dir, "list.yml")
 
     def test_save_environment_file_preserves_order(self, tmp_project_dir):
         """Test that key order is preserved (sort_keys=False)."""

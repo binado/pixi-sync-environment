@@ -110,6 +110,58 @@ dependencies:
 
 
 @pytest.fixture
+def pixi_project_with_pypi(tmp_project_dir):
+    """Create a temporary project directory with PyPI dependencies.
+
+    This fixture creates a pixi.toml with both conda and PyPI dependencies,
+    and a corresponding expected_environment.yml file.
+
+    Parameters
+    ----------
+    tmp_project_dir : Path
+        Temporary project directory.
+
+    Returns
+    -------
+    Path
+        Path to the temporary project directory.
+    """
+    pixi_toml = tmp_project_dir / "pixi.toml"
+    pixi_toml.write_text(
+        """
+[workspace]
+name = "test-project"
+version = "0.1.0"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+python = "3.13.*"
+pyyaml = "6.*"
+
+[pypi-dependencies]
+requests = ">=2.32.0"
+"""
+    )
+
+    expected_env = tmp_project_dir / "expected_environment.yml"
+    expected_env.write_text(
+        """name: default
+channels:
+- conda-forge
+- nodefaults
+dependencies:
+- python 3.13.*
+- pyyaml 6.*
+- pip
+- pip:
+  - requests>=2.32.0
+"""
+    )
+    return tmp_project_dir
+
+
+@pytest.fixture
 def mock_pixi_export_output():
     """Create mock YAML output from pixi workspace export command.
 
